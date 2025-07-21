@@ -79,22 +79,23 @@ class LLMRunner:
         # 标准处理
         return self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
-    def _process_output(self, output_ids: torch.Tensor, input_length: int) -> str:
+    def _process_output(self, output_ids: torch.Tensor) -> str:
         """处理模型输出并解码为文本"""
         # Qwen3思考模式特殊解析
         if "qwen3" in self.model_type and self.enable_thinking:
             output_ids = output_ids[0].tolist()
             try:
-                index = len(output_ids) - output_ids[::-1].index(151668)  # 151668是Qwen3思考标记
-                thinking_content = self.tokenizer.decode(output_ids[:index], skip_special_tokens=True)
-                content = self.tokenizer.decode(output_ids[index:], skip_special_tokens=True)
-                return content.strip()
+                # index = len(output_ids) - output_ids[::-1].index(151668)  # 151668是Qwen3思考标记
+                # thinking_content = self.tokenizer.decode(output_ids[:index], skip_special_tokens=True)
+                # content = self.tokenizer.decode(output_ids[index:], skip_special_tokens=True)
+                content = self.tokenizer.decode(output_ids, skip_special_tokens=True)
+                return content.split('assistant', 1)[-1].lstrip()
             except ValueError:
                 pass
         
         # 标准解码
         return self.tokenizer.decode(
-            output_ids[0][input_length:], 
+            output_ids[0], 
             skip_special_tokens=True
         ).strip()
 
@@ -113,7 +114,7 @@ class LLMRunner:
                 pad_token_id=self.tokenizer.eos_token_id
             )
         
-        return self._process_output(outputs, input_length)
+        return self._process_output(outputs)
 
     def batchInference(self, prompt_list: List[str]) -> List[str]:
         """批量推理接口"""
@@ -143,7 +144,8 @@ class LLMRunner:
         for i in range(len(prompt_list)):
             output_ids = outputs[i][input_lengths:]
             results.append(
-                self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
+                self._process_output(output_ids)
+                # self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
             )
         
         return results

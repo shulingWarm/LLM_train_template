@@ -14,6 +14,8 @@ def add_vocab(model, tokenizer: PreTrainedTokenizer,
     返回:
     包含成功添加的新token及其自动分配ID的字典
     """
+    # 这个功能目前弃用了
+    raise RuntimeError('add_vocab 这个函数目前弃用了')
     # 统一输入格式为列表
     tokens_to_add = [new_tokens] if isinstance(new_tokens, str) else new_tokens
     

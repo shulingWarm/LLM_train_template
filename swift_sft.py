@@ -2,6 +2,7 @@ from swift.llm.train import SwiftSft
 from swift.llm.argument import TrainArguments
 from SplitModelFunctor import SplitModelFunctor
 from TokenizerFunctor.OriginTokenizerFunctor import OriginTokenizerFunctor
+from TokenizerFunctor.SplitEmbeddingFunctor import SplitEmbeddingFunctor
 
 # 通过代码启动sft的训练过程
 def launch_swift_sft(model_path,
@@ -42,6 +43,7 @@ def launch_swift_sft(model_path,
         model = model_path,
         train_type = train_type,
         dataset = dataset_path,
+        model_type='qwen3',
         torch_dtype = torch_dtype,
         num_train_epochs = num_train_epochs,
         per_device_train_batch_size = per_device_train_batch_size,
@@ -70,9 +72,10 @@ def launch_swift_sft(model_path,
     train_args.tokenizer_shell = tokenizer_shell
     # 如果训练类型是part_embedding，就给每个训练句子强行带上这个训练token
     if(train_type == 'part_embedding'):
-        # 
-    # 记录tokenizer的functor
-    train_args.tokenizer_functor = OriginTokenizerFunctor()
+        train_args.tokenizer_functor = SplitEmbeddingFunctor(train_col_num = train_col_num)
+    else:
+        # 记录tokenizer的functor
+        train_args.tokenizer_functor = None
 
     # 新建sft的实体
     sft_instance = SwiftSft(train_args)

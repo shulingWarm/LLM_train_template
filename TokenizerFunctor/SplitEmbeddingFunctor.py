@@ -1,9 +1,32 @@
 from TokenizerFunctor.SwiftTokenizerFunctor import SwiftTokenizerFunctor
+import TokenizerExtender
+import ListLibrary
 
-class SplitEmbeddingFunctor:
-    def __init__(self, train_id_list):
+class SplitEmbeddingFunctor(SwiftTokenizerFunctor):
+    def __init__(self, train_col_num):
         super().__init__()
-        self.train_id_list = train_id_list
+        self.train_col_num = train_col_num
+        self.train_token_list = []
+        self.think_symbol_token = None
+
+    # 注册tokenizer时添加词表
+    def register_tokenizer(self, tokenizer):
+        super().register_tokenizer(tokenizer)
+        if (self.tokenizer is None):
+            raise RuntimeError('SplitEmbeddingFunctor should provide tokenizer')
+        # 词表的大小
+        vocab_size = tokenizer.vocab_size
+        # 根据tokenizer的size直接倒着数作为train token
+        for id_token in range(self.train_col_num):
+            token_str = f'<think_token{id_token}>'
+            temp_token_id = tokenizer.encode(token_str)
+            self.train_token_list.append(temp_token_id[0])
+        # 记录tokenizer的思考token
+        input_ids = self.tokenizer.encode('<think>')
+        # 需要确认input id只有一个
+        if(len(input_ids) != 1):
+            raise RuntimeError(f'input length {input_ids} not 1')
+        self.think_symbol_token = input_ids[0]
 
     # 根据context list和loss scale list生成input id
     def generate_input_id(self, 
@@ -22,13 +45,16 @@ class SplitEmbeddingFunctor:
             ignore_loss_scale = False
         else:
             ignore_loss_scale = all(loss_scale in {0, 1} for loss_scale in loss_scale_list)
-        # 打印context 和 loss_weight的内容，用于查看后续操作
-        
         for i, (context, loss_weight) in enumerate(zip(context_list, loss_scale_list)):
             if isinstance(context, str):
                 # tokenizer_kwargs is the returned tokenizer_kwargs,
                 # while curr_tokenizer_kwargs is the tokenizer_kwargs for the current context.
                 token_list = self._tokenize(context)
+                # 如果是第2个句子，那就在里面叠加两个token
+                if(i == 1):
+                    print('训练token替换')
+                    token_list = ListLibrary.insert_list(list1 = token_list,
+                        list2 = self.train_token_list, target_value=self.think_symbol_token)
             else:
                 token_list = context
             input_ids += token_list

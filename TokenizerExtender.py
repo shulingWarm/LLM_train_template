@@ -14,8 +14,6 @@ def add_vocab(model, tokenizer: PreTrainedTokenizer,
     返回:
     包含成功添加的新token及其自动分配ID的字典
     """
-    # 这个功能目前弃用了
-    raise RuntimeError('add_vocab 这个函数目前弃用了')
     # 统一输入格式为列表
     tokens_to_add = [new_tokens] if isinstance(new_tokens, str) else new_tokens
     
@@ -48,7 +46,8 @@ def add_vocab(model, tokenizer: PreTrainedTokenizer,
           f"实际添加 {added_count} 个新token")
     
     # 给模型调整embedding的大小
-    model.resize_token_embeddings(len(tokenizer))
+    if (model is not None):
+        model.resize_token_embeddings(len(tokenizer))
     return results
 
 # 给模型添加think token
@@ -57,3 +56,4 @@ def add_think_token(model, tokenizer, think_token_num):
     think_tokens = [f'<think_token{i}>' for i in range(think_token_num)]
     # 获取添加过的token
     token_ids = add_vocab(model, tokenizer, think_tokens)
+    return token_ids

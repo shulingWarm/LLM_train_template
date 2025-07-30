@@ -13,6 +13,10 @@ class SwiftTokenizerFunctor:
     def register_tokenizer(self, tokenizer):
         self.tokenizer = tokenizer
 
+    # 获取词表大小
+    def get_tokenizer_size(self):
+        return self.tokenizer.vocab_size
+
     # 原生的tokenize的函数
     def _tokenize(self, context, **tokenizer_kwargs):
         # 如果tokenizer还没有被初始化过，需要报个错
@@ -31,4 +35,4 @@ class SwiftTokenizerFunctor:
         context_list,
         loss_scale_list
     ):
-        pass
+        raise NotImplementedError()

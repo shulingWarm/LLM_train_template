@@ -1,53 +1,82 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
 
 class SplitEmbedding(nn.Module):
-    def __init__(self, ori_embedding, train_col_num: int):
+    def __init__(self, ori_embedding_layer, train_embedding_num):
         """
-        封装现有嵌入层，仅使其部分列可训练
+        部分参数可训练的embedding层
         
         Args:
-            ori_embedding (nn.Embedding): 原始嵌入层
-            train_col_num (int): 需设为可训练的列数（从尾部开始）
+            ori_embedding_layer (nn.Embedding): 原始Embedding层对象
+            train_embedding_num (int): 需要训练的token数量（从末尾开始计数）
         """
         super().__init__()
-        num_embeddings, embedding_dim = ori_embedding.weight.shape
+        # 提取Embedding层的权重和维度
+        ori_embedding = ori_embedding_layer.weight.data
+        vocab_size, embed_dim = ori_embedding.shape
         
-        # 验证输入列数
-        if train_col_num <= 0 or train_col_num > embedding_dim:
-            raise ValueError(f"train_col_num 必须在 1 到 {embedding_dim} 之间，但传入了 {train_col_num}")
+        # 参数检查
+        assert train_embedding_num <= vocab_size, \
+            f"train_embedding_num({train_embedding_num}) 必须小于等于总词表大小({vocab_size})"
         
-        # 从原始嵌入层获取权重
-        full_weight = ori_embedding.weight.detach().clone()
+        # 切分嵌入矩阵
+        self.fixed_embedding_num = vocab_size - train_embedding_num
+        self.train_embedding_num = train_embedding_num
+        self.embedding_dim = embed_dim
+        self.padding_idx = getattr(ori_embedding_layer, 'padding_idx', None)
         
-        # 分离固定部分和可训练部分
-        self.split_idx = embedding_dim - train_col_num
+        # 固定部分（不可训练）
+        fixed_embeddings = ori_embedding[:self.fixed_embedding_num].detach().clone()
+        self.register_buffer('fixed_embedding', fixed_embeddings)
         
-        # 固定部分：移除尾部可训练列
-        self.freeze_part = full_weight[:, :self.split_idx].detach().clone()
-        self.freeze_part.requires_grad = False  # 确保无梯度计算
-        
-        # 可训练部分：仅尾部列
-        self.training_part = nn.Parameter(full_weight[:, self.split_idx:].clone())
-        
-        # 词表大小和维度信息
-        self.num_embeddings = num_embeddings
-        self.embedding_dim = embedding_dim
-        
-        # 注册缓冲区以确保兼容设备转移
-        self.register_buffer('freeze_buffer', self.freeze_part)
-
+        # 可训练部分
+        train_embeddings = ori_embedding[-train_embedding_num:].detach().clone()
+        self.train_embedding = nn.Parameter(train_embeddings)
+    
     def forward(self, input_ids):
         """
-        前向传播：拼接固定部分和可训练部分
+        Args:
+            input_ids (Tensor): 输入token ID，任意形状
+        Returns:
+            embeddings (Tensor): 对应embedding向量
         """
-        # 在设备上获取固定部分（兼容CPU/GPU切换）
-        freeze_part = self.freeze_buffer
+        # 1. 计算固定部分索引和可训练部分索引
+        fixed_mask = input_ids < self.fixed_embedding_num
+        train_mask = ~fixed_mask
         
-        # 高效拼接权重矩阵：固定部分 + 可训练部分
-        full_weight = torch.cat([freeze_part, self.training_part], dim=1)
+        # 2. 初始化输出张量
+        output = torch.empty(
+            *input_ids.shape, self.embedding_dim, 
+            dtype=self.fixed_embedding.dtype,
+            device=input_ids.device
+        )
         
-        # 执行嵌入查找
-        return F.embedding(input_ids, full_weight)
+        # 3. 处理固定部分
+        if torch.any(fixed_mask):
+            fixed_ids = input_ids[fixed_mask]
+            # 确保索引安全 (0 到 fixed_embedding_num-1)
+            fixed_ids = fixed_ids.clamp(min=0, max=self.fixed_embedding_num-1)
+            output[fixed_mask] = self.fixed_embedding[fixed_ids]
+        
+        # 4. 处理可训练部分
+        if torch.any(train_mask):
+            # 计算在可训练矩阵中的局部索引
+            train_ids = input_ids[train_mask] - self.fixed_embedding_num
+            # 确保索引在合法范围 (0 ~ train_embedding_num-1)
+            train_ids = train_ids.clamp(min=0, max=self.train_embedding_num-1)
+            output[train_mask] = self.train_embedding[train_ids]
+        
+        # 处理padding索引（如果存在）
+        if self.padding_idx is not None:
+            padding_mask = input_ids == self.padding_idx
+            if padding_mask.any():
+                output[padding_mask] = 0.0
+                
+        return output
 
+    def extra_repr(self):
+        return f"总词表大小: {self.fixed_embedding_num + self.train_embedding_num}, " \
+               f"固定参数: {self.fixed_embedding_num}, " \
+               f"可训练参数: {self.train_embedding_num}, " \
+               f"嵌入维度: {self.embedding_dim}" + \
+               (f", padding_idx: {self.padding_idx}" if self.padding_idx is not None else "")

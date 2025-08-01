@@ -43,6 +43,11 @@ class SplitLinear(nn.Module):
         # 注册缓冲区确保设备兼容性
         self.register_buffer('fix_buffer', self.fix_part)
 
+    # 存储训练过程中的checkpoint
+    def save_checkpoint(self, save_path):
+        # 保存可训练的部分
+        torch.save(self.train_part, save_path)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         前向传播：分别计算固定和可训练部分的结果并拼接

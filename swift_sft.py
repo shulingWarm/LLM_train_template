@@ -3,6 +3,8 @@ from swift.llm.argument import TrainArguments
 from SplitModelFunctor import SplitModelFunctor
 from TokenizerFunctor.OriginTokenizerFunctor import OriginTokenizerFunctor
 from TokenizerFunctor.SplitEmbeddingFunctor import SplitEmbeddingFunctor
+from CheckpointSaveFunctor.CheckpointSaveFunctor import CheckpointSaveFunctor
+from CheckpointSaveFunctor.SaveSplitEmbedding import SaveSplitEmbedding
 
 # 通过代码启动sft的训练过程
 def launch_swift_sft(model_path,
@@ -73,6 +75,8 @@ def launch_swift_sft(model_path,
     # 如果训练类型是part_embedding，就给每个训练句子强行带上这个训练token
     if(train_type == 'part_embedding'):
         train_args.tokenizer_functor = SplitEmbeddingFunctor(train_col_num = train_col_num)
+        # 在training args里面叠加checkpoint functor
+        train_args.training_args.checkpoint_save_functor = SaveSplitEmbedding()
     else:
         # 记录tokenizer的functor
         train_args.tokenizer_functor = None

@@ -32,6 +32,10 @@ class SplitEmbedding(nn.Module):
         # 可训练部分
         train_embeddings = ori_embedding[-train_embedding_num:].detach().clone()
         self.train_embedding = nn.Parameter(train_embeddings)
+
+    def save_checkpoint(self, save_path):
+        # 将 tensor保存成.pt文件
+        torch.save(self.train_embedding, save_path)
     
     def forward(self, input_ids):
         """

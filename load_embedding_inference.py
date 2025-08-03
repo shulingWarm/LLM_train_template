@@ -54,5 +54,5 @@ def load_embedding_inference(model_path, embedding_checkpoint_path):
     llm_runner = LLMRunner(model = model, model_type='qwen3', 
         tokenizer = tokenizer, enable_thinking=True)
     # 调用 runner做一下推理
-    print(llm_runner.inference("男性和女性在生理上的主要区别是什么？"))
+    print(llm_runner.inference("三国杀移动版中关羽的技能是什么？"))
     

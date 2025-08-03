@@ -28,6 +28,13 @@ class SplitEmbeddingFunctor(SwiftTokenizerFunctor):
             raise RuntimeError(f'input length {input_ids} not 1')
         self.think_symbol_token = input_ids[0]
 
+    # 对需要插入的token list的处理
+    # 方便子类函数做一些修改用的
+    def insert_think_token(self, ori_list):
+        return ListLibrary.insert_list(list1 = ori_list,
+                        list2 = self.train_token_list, target_value=self.think_symbol_token,
+                        hit_offset = 1)
+
     # 根据context list和loss scale list生成input id
     def generate_input_id(self, 
         context_list,
@@ -52,10 +59,9 @@ class SplitEmbeddingFunctor(SwiftTokenizerFunctor):
                 token_list = self._tokenize(context)
                 # 如果是第2个句子，那就在里面叠加两个token
                 if(i == 1):
-                    print('训练token替换')
-                    token_list = ListLibrary.insert_list(list1 = token_list,
-                        list2 = self.train_token_list, target_value=self.think_symbol_token,
-                        hit_offset = 1)
+                    print('训练token替换', __file__)
+                    token_list = self.insert_think_token(ori_list=token_list)
+                    print(token_list)
             else:
                 token_list = context
             input_ids += token_list

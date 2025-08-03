@@ -3,6 +3,7 @@ from swift.llm.argument import TrainArguments
 from SplitModelFunctor import SplitModelFunctor
 from TokenizerFunctor.OriginTokenizerFunctor import OriginTokenizerFunctor
 from TokenizerFunctor.SplitEmbeddingFunctor import SplitEmbeddingFunctor
+from TokenizerFunctor.SeparateInsertThinkToken import SeparateInsertThinkToken
 from CheckpointSaveFunctor.CheckpointSaveFunctor import CheckpointSaveFunctor
 from CheckpointSaveFunctor.SaveSplitEmbedding import SaveSplitEmbedding
 
@@ -15,6 +16,7 @@ def launch_swift_sft(model_path,
     output_dir, # 输出路径
     tokenizer_shell = None, # tokenizer的封装处理
     system = 'You are a helpful assistant.',
+    think_token_insert = 'separate', # separate对应的是均匀插入，begin表示插入在开头的位置
     per_device_train_batch_size = 1,
     per_device_eval_batch_size = 1,
     learning_rate = 1e-4,
@@ -74,7 +76,10 @@ def launch_swift_sft(model_path,
     train_args.tokenizer_shell = tokenizer_shell
     # 如果训练类型是part_embedding，就给每个训练句子强行带上这个训练token
     if(train_type == 'part_embedding'):
-        train_args.tokenizer_functor = SplitEmbeddingFunctor(train_col_num = train_col_num)
+        if(think_token_insert == 'separate'):
+            train_args.tokenizer_functor = SeparateInsertThinkToken(train_col_num=train_col_num)
+        else:
+            train_args.tokenizer_functor = SplitEmbeddingFunctor(train_col_num = train_col_num)
         # 在training args里面叠加checkpoint functor
         train_args.training_args.checkpoint_save_functor = SaveSplitEmbedding()
     else:

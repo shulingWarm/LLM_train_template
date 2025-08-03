@@ -46,7 +46,7 @@ class SplitLinear(nn.Module):
     # 存储训练过程中的checkpoint
     def save_checkpoint(self, save_path):
         # 保存可训练的部分
-        torch.save(self.train_part, save_path)
+        torch.save(self.train_part.data, save_path)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """

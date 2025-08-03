@@ -54,7 +54,8 @@ class SplitEmbeddingFunctor(SwiftTokenizerFunctor):
                 if(i == 1):
                     print('训练token替换')
                     token_list = ListLibrary.insert_list(list1 = token_list,
-                        list2 = self.train_token_list, target_value=self.think_symbol_token)
+                        list2 = self.train_token_list, target_value=self.think_symbol_token,
+                        hit_offset = 1)
             else:
                 token_list = context
             input_ids += token_list

@@ -3,16 +3,43 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, 
 from typing import Union, List, Optional
 
 class StopOnTokens(StoppingCriteria):
-    """自定义停止条件，遇到特定标记时停止生成"""
+    """自定义停止条件，遇到特定标记时停止生成（支持batch处理）"""
     def __init__(self, tokenizer, stop_list):
-        self.stop_token_ids = [tokenizer.encode(x, add_special_tokens=False) for x in stop_list]
+        # 打印一下tokenzer里面词表的最大值
+        print('tokenizer.vocab_size',tokenizer.vocab_size)
+        # 过滤空标记并确保停止标记有效
+        self.stop_token_ids = []
+        for x in stop_list:
+            token_ids = tokenizer.encode(x, add_special_tokens=False)
+            if token_ids:  # 跳过空列表
+                self.stop_token_ids.append(token_ids)
+                # # 检查标记是否在词汇表范围内
+                # if hasattr(tokenizer, "vocab_size") and any(id_ >= tokenizer.vocab_size for id_ in token_ids):
+                #     raise RuntimeError(f"警告: 停止词 '{x}' 包含超出词汇表范围的标记: {token_ids}")
+                # else:
+                #     self.stop_token_ids.append(token_ids)
         
+        # 预转换停止标记为设备无关的张量
+        self.stop_tensors = [torch.tensor(ids, dtype=torch.long) for ids in self.stop_token_ids]
+
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        for stop_ids in self.stop_token_ids:
-            if input_ids.shape[1] >= len(stop_ids) and torch.all(
-                input_ids[0, -len(stop_ids):] == torch.tensor(stop_ids, device=input_ids.device)
-            ):
-                return True
+        # 遍历所有预定义的停止标记序列
+        for stop_tensor in self.stop_tensors:
+            if stop_tensor.numel() == 0:  # 跳过空张量
+                continue
+                
+            stop_len = len(stop_tensor)
+            # 检查batch中每个样本
+            for i in range(input_ids.size(0)):
+                if input_ids.size(1) < stop_len:
+                    continue
+                    
+                # 获取当前样本的最后N个token
+                sequence_end = input_ids[i, -stop_len:].to(stop_tensor.device)
+                
+                # 比较是否匹配停止标记
+                if torch.all(sequence_end == stop_tensor.to(sequence_end.device)):
+                    return True
         return False
 
 class LLMRunner:
@@ -21,7 +48,8 @@ class LLMRunner:
                  model_type: str = "qwen",
                  max_new_token: int = 512,
                  device: str = "auto",
-                 enable_thinking: bool = False):
+                 enable_thinking: bool = False,
+                 tokenizer = None):
         """
         初始化Qwen模型推理引擎
         
@@ -44,17 +72,21 @@ class LLMRunner:
                 device_map="auto" if self.device == "cuda" else None
             ).to(self.device)
             self.tokenizer = AutoTokenizer.from_pretrained(model)
+            # 设置停止条件
+            stop_list = ['\nHuman:', '\n```\n'] if "instruct" in model else ['<|endoftext|>']
         else:
+            if (tokenizer is None):
+                raise RuntimeError('tokenizer cannot be None when model is not path')
             self.model = model.to(self.device)
-            self.tokenizer = AutoTokenizer.from_pretrained(model.config._name_or_path)
+            self.tokenizer = tokenizer
+            # 设置停止条件
+            stop_list = ['<|endoftext|>']
         
         self.model.eval()
         self.max_new_token = max_new_token
         self.model_type = model_type
         self.enable_thinking = enable_thinking
         
-        # 设置停止条件
-        stop_list = ['\nHuman:', '\n```\n'] if "instruct" in model else ['<|endoftext|>']
         self.stopping_criteria = StoppingCriteriaList([
             StopOnTokens(self.tokenizer, stop_list)
         ])

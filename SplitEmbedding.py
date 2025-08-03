@@ -35,7 +35,7 @@ class SplitEmbedding(nn.Module):
 
     def save_checkpoint(self, save_path):
         # 将 tensor保存成.pt文件
-        torch.save(self.train_embedding, save_path)
+        torch.save(self.train_embedding.data, save_path)
     
     def forward(self, input_ids):
         """

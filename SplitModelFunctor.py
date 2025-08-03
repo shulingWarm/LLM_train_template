@@ -11,10 +11,10 @@ def set_model_embedding(model, new_embedding):
 
 # 获得模型的输出linear层
 def get_model_out_head(model):
-    return model.model.lm_head
+    return model.lm_head
 
 def set_model_out_head(model, new_out_head):
-    model.model.lm_head = new_out_head
+    model.lm_head = new_out_head
 
 # 传入整个LLM模型，然后替换模型里面的embedding
 class SplitModelFunctor:

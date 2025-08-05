@@ -6,6 +6,7 @@ from TokenizerFunctor.SplitEmbeddingFunctor import SplitEmbeddingFunctor
 from TokenizerFunctor.SeparateInsertThinkToken import SeparateInsertThinkToken
 from CheckpointSaveFunctor.CheckpointSaveFunctor import CheckpointSaveFunctor
 from CheckpointSaveFunctor.SaveSplitEmbedding import SaveSplitEmbedding
+from LossFunctor.TrainEmbeddingFunctor import TrainEmbeddingFunctor
 
 # 通过代码启动sft的训练过程
 def launch_swift_sft(model_path,
@@ -82,6 +83,8 @@ def launch_swift_sft(model_path,
             train_args.tokenizer_functor = SplitEmbeddingFunctor(train_col_num = train_col_num)
         # 在training args里面叠加checkpoint functor
         train_args.training_args.checkpoint_save_functor = SaveSplitEmbedding()
+        # 指定 train args里面的model loss
+        train_args.model_loss = TrainEmbeddingFunctor(train_col_num)
     else:
         # 记录tokenizer的functor
         train_args.tokenizer_functor = None

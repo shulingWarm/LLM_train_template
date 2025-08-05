@@ -5,6 +5,7 @@ from SplitEmbedding import SplitEmbedding
 from SplitLinear import SplitLinear
 import os
 import torch
+import traceback
 
 # 加载checkpoint
 def load_embedding_checkpoint(checkpoint_dir):
@@ -16,6 +17,9 @@ def load_embedding_checkpoint(checkpoint_dir):
 class SaveSplitEmbedding(CheckpointSaveFunctor):
     
     def __call__(self, output_dir):
+        # 打印保存checkpoint时的调用栈
+        traceback.print_stack()
+        exit()
         # 模型必须是有效模型
         if (self.model is None):
             raise RuntimeError('Model is None')

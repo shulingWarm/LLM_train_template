@@ -2,6 +2,10 @@
 from transformers import PreTrainedTokenizer
 from typing import Union, List
 
+# 根据id获取think token
+def get_think_token(id_think):
+    return f'<think_token{id_think}>'
+
 def add_vocab(model, tokenizer: PreTrainedTokenizer, 
               new_tokens: Union[str, List[str]]) -> dict:
     """

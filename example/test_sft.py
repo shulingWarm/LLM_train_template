@@ -29,7 +29,7 @@ swift_sft.launch_swift_sft(
     num_train_epochs = 100,
     output_dir = '/mnt/data/temp/train_output',
     torch_dtype = torch.bfloat16,
-    think_token_insert = 'separate',
+    think_token_insert = 'begin',
     tokenizer_shell = None,
     train_col_num = 20,
     learning_rate = 1e-1

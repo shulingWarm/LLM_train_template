@@ -26,10 +26,10 @@ swift_sft.launch_swift_sft(
     model_path = '/mnt/data/models/qwen3_save',
     train_type = 'part_embedding',
     dataset_path = '/mnt/data/temp/dataset_example/train_data_only.json',
-    num_train_epochs = 100,
+    num_train_epochs = 1000,
     output_dir = '/mnt/data/temp/train_output',
     torch_dtype = torch.bfloat16,
-    think_token_insert = 'begin',
+    think_token_insert = 'separate',
     tokenizer_shell = None,
     train_col_num = 20,
     learning_rate = 1e-1

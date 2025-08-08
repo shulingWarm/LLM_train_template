@@ -86,6 +86,8 @@ class LLMRunner:
         self.max_new_token = max_new_token
         self.model_type = model_type
         self.enable_thinking = enable_thinking
+        if(hasattr(self.model, 'register_tokenizer')):
+            self.model.register_tokenizer(self.tokenizer)
         
         self.stopping_criteria = StoppingCriteriaList([
             StopOnTokens(self.tokenizer, stop_list)
@@ -130,6 +132,21 @@ class LLMRunner:
             output_ids[0], 
             skip_special_tokens=True
         ).strip()
+
+    def direct_generate(self, prompt):
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=self.max_new_token,
+                stopping_criteria=self.stopping_criteria,
+                temperature=0.1,
+                repetition_penalty=1.1,
+                pad_token_id=self.tokenizer.eos_token_id
+            )
+        
+        return self._process_output(outputs)
 
     def inference(self, prompt: str) -> str:
         """单次推理接口"""

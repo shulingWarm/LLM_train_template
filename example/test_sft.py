@@ -4,6 +4,7 @@ sys.path.insert(0, '/mnt/data/workspace/trainer_template')
 import torch
 import swift_sft
 from TokenizerPrintShell import TokenizerPrintShell
+from models.qwen3 import register_model
 
 # lora训练的模式
 def lora_train():
@@ -19,6 +20,8 @@ def lora_train():
         train_col_num = 20,
         learning_rate = 1e-4
     )
+
+register_model()
 
 # 测试启动sft的训练
 swift_sft.launch_swift_sft(

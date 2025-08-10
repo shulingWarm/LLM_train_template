@@ -88,6 +88,9 @@ class LLMRunner:
         self.enable_thinking = enable_thinking
         if(hasattr(self.model, 'register_tokenizer')):
             self.model.register_tokenizer(self.tokenizer)
+        # 判断加载weight之后是否需要后处理
+        if(hasattr(self.model, 'load_weight_post_process')):
+            self.model.load_weight_post_process()
         
         self.stopping_criteria = StoppingCriteriaList([
             StopOnTokens(self.tokenizer, stop_list)

@@ -3,6 +3,7 @@ from transformers.loss.loss_utils import fixed_cross_entropy
 import TokenizerExtender
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 def preprocess_focus_tokens(focus_token_list, device='cpu'):
     """
@@ -76,11 +77,12 @@ def sft_loss(source, target, focus_token_tensor, focus_token_set, ignore_id=-100
     # 步骤5: 提取焦点token对应的logits
     focus_logits = suppress_logits[:, focus_token_tensor]  # [num_suppress, num_focus]
     
-    # 步骤6: 数值稳定处理
-    clamped_logits = focus_logits.clamp(max=20.0)  # 上限20 (exp(20)=4.85e8)
+    # 步骤6: 做softmax运算
+    exp_values = F.softmax(focus_logits, dim=-1)
+    # clamped_logits = focus_logits.clamp(max=20.0)  # 上限20 (exp(20)=4.85e8)
     
-    # 步骤7: 计算指数损失
-    exp_values = torch.exp(clamped_logits)          # [num_suppress, num_focus]
+    # # 步骤7: 计算指数损失
+    # exp_values = torch.exp(clamped_logits)          # [num_suppress, num_focus]
     loss_per_position = torch.sum(exp_values, dim=1)  # [num_suppress]
     loss = torch.mean(loss_per_position)            # 标量
     

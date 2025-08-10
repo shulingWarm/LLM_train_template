@@ -84,4 +84,4 @@ def print_topk(topk_prob: torch.Tensor, topk_ids: torch.Tensor, tokenizer):
             candidate_strs.append(f"{token_str}:{prob_val:.4f}")
         
         # 连接并打印当前token的所有候选
-        print(",\t".join(candidate_strs))
+        print(i,': ',",\t".join(candidate_strs))
